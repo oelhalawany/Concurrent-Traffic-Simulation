@@ -45,6 +45,7 @@ void MessageQueue<T>::send(T &&msg)
 TrafficLight::TrafficLight()
 {
     _currentPhase = TrafficLightPhase::red;
+    TrafficLightPhase_MsgQueue = std::make_shared<MessageQueue<TrafficLightPhase>>();
 }
 
 
