@@ -35,7 +35,8 @@ void MessageQueue<T>::send(T &&msg)
 
     // add vector to queue
     std::cout << "   Message " << msg << " has been sent to the queue" << std::endl;
-    _messages.push_back(std::move(msg));
+  	_messages.clear();
+    _messages.emplace_back(std::move(msg));
     _cond.notify_one(); // notify client after pushing new Vehicle into vector
 }
 
@@ -56,8 +57,6 @@ void TrafficLight::waitForGreen()
     // Once it receives TrafficLightPhase::green, the method returns.
     while(1)
     {
-        std::this_thread::sleep_for(std::chrono::milliseconds(1));
-
         if (TrafficLightPhase_MsgQueue->receive() == TrafficLightPhase::green) 
         { 
             return; 
@@ -86,19 +85,18 @@ void TrafficLight::cycleThroughPhases()
     // to the message queue using move semantics. The cycle duration should be a random value between 4 and 6 seconds. 
     // Also, the while-loop should use std::this_thread::sleep_for to wait 1ms between two cycles. 
     
-    /* Init our random generation between 4 and 6 seconds */
-	auto cycleDuration = rand()%3 + 4;
-
+    /* Init our random generation between 4 and 6 milli seconds */
+	auto cycleDuration = (rand()%3 + 4)*1000;
     auto start = std::chrono::high_resolution_clock::now();
+    double difference;
   
     while(1)
     {
         // Sleep to avoid high CPU load
     	std::this_thread::sleep_for(std::chrono::milliseconds(1));
 
-
         auto finish = std::chrono::high_resolution_clock::now();
-        double difference = std::chrono::duration<double, std::milli>(finish-start).count();
+        difference = std::chrono::duration<double, std::milli>(finish-start).count();
 
         //std::cout<<"difference: " <<difference<<"\n";
 
@@ -115,14 +113,14 @@ void TrafficLight::cycleThroughPhases()
           
             /* Send an update to the message queue and wait for it to be sent */
 			auto msg = _currentPhase;
-			auto t = std::async(std::launch::async, &MessageQueue<TrafficLightPhase>::send, TrafficLightPhase_MsgQueue, std::move(msg));
-			t.wait();
+
+            TrafficLightPhase_MsgQueue->send(std::move(msg));
 
 			/* Reset stop watch for next cycle */
 			start = std::chrono::high_resolution_clock::now();
 
 			/* Randomly choose the cycle duration for the next cycle */
-            cycleDuration = rand()%3 + 4;
+            cycleDuration = (rand()%3 + 4)*1000;
         }
     }
 
